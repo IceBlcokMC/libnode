@@ -1,0 +1,65 @@
+name: Build LibNode
+
+on: workflow_dispatch
+
+env:
+  NodeVersion: v22.18.0
+  PythonVersion: "3.12"
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          repository: "nodejs/node"
+          ref: ${{env.NodeVersion}}
+
+      - name: Setup Python ${{env.PythonVersion}}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{env.PythonVersion}}
+
+      - name: Install NASM
+        run: choco install nasm
+
+      - name: Environment Information
+        run: npx envinfo
+
+      - name: Build
+        id: build
+        run: |
+          vcbuild.bat dll x64 release vs2022
+        shell: cmd
+
+      - name: Organize the SDK
+        shell: bash
+        run: |
+          mkdir libnode
+
+          mkdir libnode/include
+          cp -r src/* libnode/include/
+          cp -r deps/v8/ libnode/include/
+          cp -r deps/uv/ libnode/include/
+
+          mkdir libnode/lib
+          cp out/Release/libnode.lib libnode/lib/
+          cp out/Release/node.lib libnode/lib/
+
+          mkdir libnode/bin
+          cp out/Release/libnode.dll libnode/bin/
+          cp out/Release/libnode.pdb libnode/bin/
+          cp out/Release/node.exe libnode/bin/
+          cp out/Release/node.pdb libnode/bin/
+
+          mkdir libnode/npm
+          cp -r deps/npm/* libnode/npm/
+
+          find libnode/include -name "*.cc" -delete
+
+      - uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: libnode-${{ env.NodeVersion }}
+          path: libnode
