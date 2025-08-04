@@ -1,4 +1,4 @@
-name: Build LibNode
+name: Build LibNode(Windows-MSVC)
 
 on: workflow_dispatch
 
@@ -10,6 +10,11 @@ jobs:
   build:
     runs-on: windows-2022
     steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          path: "${{ github.workspace }}/libnode_repo"
+
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
@@ -36,30 +41,10 @@ jobs:
       - name: Organize the SDK
         shell: bash
         run: |
-          mkdir libnode
-
-          mkdir libnode/include
-          cp -r src/* libnode/include/
-          cp -r deps/v8/ libnode/include/
-          cp -r deps/uv/ libnode/include/
-
-          mkdir libnode/lib
-          cp out/Release/libnode.lib libnode/lib/
-          cp out/Release/node.lib libnode/lib/
-
-          mkdir libnode/bin
-          cp out/Release/libnode.dll libnode/bin/
-          cp out/Release/libnode.pdb libnode/bin/
-          cp out/Release/node.exe libnode/bin/
-          cp out/Release/node.pdb libnode/bin/
-
-          mkdir libnode/npm
-          cp -r deps/npm/* libnode/npm/
-
-          find libnode/include -name "*.cc" -delete
+          sh ${{ github.workspace }}/libnode_repo/scripts/organize-sdk-win.sh
 
       - uses: actions/upload-artifact@v4
         with:
           include-hidden-files: true
-          name: libnode-${{ env.NodeVersion }}
-          path: libnode
+          name: libnode-${{ env.NodeVersion }}-x64-win
+          path: libnode/
