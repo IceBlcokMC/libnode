@@ -1,0 +1,25 @@
+diff --git a/tools/gyp/pylib/gyp/generator/ninja.py b/tools/gyp/pylib/gyp/generator/ninja.py
+index bc9ddd26..61befc07 100644
+--- a/tools/gyp/pylib/gyp/generator/ninja.py
++++ b/tools/gyp/pylib/gyp/generator/ninja.py
+@@ -1463,12 +1463,14 @@ class NinjaWriter:
+             # flags can still override them.
+             ldflags = env_ldflags + config.get("ldflags", [])
+             if is_executable and solibs:
+-                rpath = "lib/"
+-                if self.toolset != "target":
+-                    rpath += self.toolset
+-                    ldflags.append(r"-Wl,-rpath=\$$ORIGIN/%s" % rpath)
+-                else:
+-                    ldflags.append("-Wl,-rpath=%s" % self.target_rpath)
++                # rpath = "lib/"
++                # if self.toolset != "target":
++                #     rpath += self.toolset
++                #     ldflags.append(r"-Wl,-rpath=\$$ORIGIN/%s" % rpath)
++                # else:
++                #     ldflags.append("-Wl,-rpath=%s" % self.target_rpath)
++                rpath = ""
++                ldflags.append(r"-Wl,-rpath=\$$ORIGIN/%s" % rpath)
+                 ldflags.append("-Wl,-rpath-link=%s" % rpath)
+         self.WriteVariableList(ninja_file, "ldflags", map(self.ExpandSpecial, ldflags))
+ 

@@ -1,0 +1,129 @@
+name: Build libnode(Windows-MSVC)
+
+on:
+  workflow_dispatch:
+  # push:
+  #   paths:
+  #     - .github/**
+  #     - patchs/**
+  #     - scripts/**
+  #     - NODE_VERSION.txt
+
+env:
+  LLVM_VERSION: 20
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - windows-2022
+          - ubuntu-24.04
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout libnode scripts repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: Get Version from NODE_VERSION.txt
+        run: |
+          NODE_VERSION=$(tr -d '\r' < "${{ github.workspace }}/NODE_VERSION.txt")
+          echo "NodeVersion=$NODE_VERSION" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Checkout Node.js source code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+          repository: "nodejs/node"
+          ref: ${{ env.NodeVersion }}
+          path: "${{ github.workspace }}/node"
+
+      # Github Actions images have python 3.12.x, skip this step
+
+      - name: Install NASM (Windows)
+        if: matrix.os == 'windows-2022'
+        run: choco install nasm
+
+      - name: Update Clang Toolchain (Linux)
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          sudo apt update
+          sudo apt install -y wget gnupg lsb-release
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh ${{ env.LLVM_VERSION }} all
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${{env.LLVM_VERSION}} 100
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${{env.LLVM_VERSION}} 100
+          sudo update-alternatives --install /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-${{env.LLVM_VERSION}} 100
+          sudo update-alternatives --install /usr/bin/ld ld /usr/bin/ld.lld-${{env.LLVM_VERSION}} 100
+
+      - name: Install Ninja (Linux)
+        if: matrix.os == 'ubuntu-24.04'
+        run: sudo apt install -y ninja-build
+
+      - name: Export v8 platform symbols (Patch)
+        working-directory: ${{ github.workspace }}/node
+        run: |
+          git apply ../patches/24.x/v8-export.diff
+
+      - name: Reset Node.js rpath (Patch) (Linux)
+        if: matrix.os == 'ubuntu-24.04'
+        working-directory: ${{ github.workspace }}/node
+        run: |
+          git apply ../patches/24.x/node-rpath-reset.diff
+
+      - name: Build Node.js (Windows)
+        if: matrix.os == 'windows-2022'
+        working-directory: ${{ github.workspace }}/node
+        run: |
+          ./vcbuild.bat dll x64 release vs2022
+        shell: pwsh
+
+      - name: Configure and Build Node.js (Linux)
+        if: matrix.os == 'ubuntu-24.04'
+        working-directory: ${{ github.workspace }}/node
+        run: |
+          export CC=clang
+          export CXX=clang++
+          export CXXFLAGS="-stdlib=libc++"
+          export LDFLAGS="-stdlib=libc++"
+          ./configure --ninja --shared
+          make -j$(nproc)
+
+      - name: Packaging
+        shell: bash
+        run: |
+          sh ./scripts/packaging.sh
+
+      # 上传编译结果
+      - uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: libnode-win-x64-bin
+          path: |
+            ${{ github.workspace }}/libnode-win-x64-bin/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: libnode-win-x64-npm
+          path: |
+            ${{ github.workspace }}/libnode-win-x64-npm/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: libnode-win-x64-pdb
+          path: |
+            ${{ github.workspace }}/libnode-win-x64-pdb/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: libnode-win-x64-sdk
+          path: |
+            ${{ github.workspace }}/libnode-win-x64-sdk/
