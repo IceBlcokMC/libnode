@@ -1,0 +1,21 @@
+diff --git a/tools/v8_gypfiles/v8.gyp b/tools/v8_gypfiles/v8.gyp
+index 8c3a558a..98a226cf 100644
+--- a/tools/v8_gypfiles/v8.gyp
++++ b/tools/v8_gypfiles/v8.gyp
+@@ -1656,12 +1656,12 @@
+       'sources': [
+         '<!@pymod_do_main(GN-scraper "<(V8_ROOT)/BUILD.gn"  "\\"v8_libplatform.*?sources = ")',
+       ],
++      'direct_dependent_settings': {
++        'defines': ['USING_V8_PLATFORM_SHARED'],
++      },
++      'defines': ['BUILDING_V8_PLATFORM_SHARED'],
+       'conditions': [
+         ['component=="shared_library"', {
+-          'direct_dependent_settings': {
+-            'defines': ['USING_V8_PLATFORM_SHARED'],
+-          },
+-          'defines': ['BUILDING_V8_PLATFORM_SHARED'],
+         }],
+         ['v8_use_perfetto==1', {
+           'sources!': [
