@@ -1,4 +1,4 @@
-name: Build libnode(Windows-MSVC)
+name: Build libnode
 
 on:
   workflow_dispatch:
