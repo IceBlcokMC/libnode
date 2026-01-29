@@ -56,6 +56,8 @@ jobs:
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           sudo ./llvm.sh ${{ env.LLVM_VERSION }} all
+          sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang-${{env.LLVM_VERSION}} 100
+          sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-${{env.LLVM_VERSION}} 100
           sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${{env.LLVM_VERSION}} 100
           sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${{env.LLVM_VERSION}} 100
           sudo update-alternatives --install /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-${{env.LLVM_VERSION}} 100
