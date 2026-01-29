@@ -63,7 +63,7 @@ jobs:
       - name: Packaging
         shell: bash
         run: |
-          sh ${{ github.workspace }}/scripts/packaging.sh
+          sh ./scripts/packaging.sh
 
       # 上传编译结果
       - uses: actions/upload-artifact@v4
