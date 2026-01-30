@@ -78,7 +78,7 @@ echo "Create dir: $bin_dir"
 mkdir "$bin_dir"
 
 echo "Copy binaries..."
-cp node/out/Release/lib/libnode.so.* "$sdk_lib_dir"
-cp node/out/Release/node "$sdk_lib_dir"
+cp node/out/Release/lib/libnode.so.* "$bin_dir"
+cp node/out/Release/node "$bin_dir"
 
 echo "[3/3] Packaging binaries complete."
