@@ -182,8 +182,9 @@ jobs:
       - name: Compute SHA256
         shell: bash
         run: |
-          set -eux
-          sha256sum libnode-${{ matrix.type }}-x64-*.zip libnode-npm.zip > SHA256SUMS
+          FILES="libnode-${{ matrix.type }}-x64-*.zip"
+          [ "${{ matrix.type }}" = "win" ] && FILES="$FILES libnode-npm.zip"
+          sha256sum $FILES > SHA256SUMS-${{ matrix.type }}
 
       - name: Upload Release
         uses: softprops/action-gh-release@v2
@@ -193,13 +194,13 @@ jobs:
           draft: false
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
-          body: |
-            ### Checksums
+          append_body: true
+          body: |-
             ```
-              $(cat SHA256SUMS)
+              $(cat SHA256SUMS-${{ matrix.type }} || true)
             ```
 
           files: |
             libnode-${{ matrix.type }}-x64-*.zip
             libnode-npm.zip
-            SHA256SUMS
+            SHA256SUMS-${{ matrix.type }}
