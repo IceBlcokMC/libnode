@@ -1,4 +1,4 @@
-name: Build libnode
+name: Build libnode and Publish
 
 on:
   push:
