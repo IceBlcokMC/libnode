@@ -174,11 +174,25 @@ jobs:
         shell: bash
         run: |
           set -eux
-          zip -r libnode-npm.zip libnode-npm
-          zip -r libnode-${{ matrix.type }}-x64-bin.zip libnode-${{ matrix.type }}-x64-bin
-          zip -r libnode-${{ matrix.type }}-x64-sdk.zip libnode-${{ matrix.type }}-x64-sdk
+
+          function pack_flat() {
+            local dir=$1
+            local zipfile=$2
+            
+            if [ -d "$dir" ]; then
+              echo "Packing $dir into $zipfile (flat)..."
+              pushd "$dir" > /dev/null
+              zip -r "../$zipfile" .
+              popd > /dev/null
+            fi
+          }
+
+          pack_flat "libnode-npm" "libnode-npm.zip"
+          pack_flat "libnode-${{ matrix.type }}-x64-bin" "libnode-${{ matrix.type }}-x64-bin.zip"
+          pack_flat "libnode-${{ matrix.type }}-x64-sdk" "libnode-${{ matrix.type }}-x64-sdk.zip"
+
           if [ "${{ matrix.type }}" = "win" ]; then
-            zip -r libnode-${{ matrix.type }}-x64-pdb.zip libnode-${{ matrix.type }}-x64-pdb
+            pack_flat "libnode-${{ matrix.type }}-x64-pdb" "libnode-${{ matrix.type }}-x64-pdb.zip"
           fi
 
       - name: Compute SHA256
