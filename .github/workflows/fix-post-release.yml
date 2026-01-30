@@ -1,0 +1,92 @@
+name: Manual Fix Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_tag:
+        description: 'Target Tag Name (e.g. v24.13.0)'
+        required: true
+        default: 'v24.13.0'
+      source_run_id:
+        description: 'Source Run ID with Artifacts'
+        required: true
+        default: '21507945723'
+
+jobs:
+  manual-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        type: [win, linux]
+
+    steps:
+      - name: Download NPM files
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          run_id: ${{ inputs.source_run_id }}
+          path: libnode-npm
+          name: libnode-npm
+
+      - name: Download Bin files
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          run_id: ${{ inputs.source_run_id }}
+          path: libnode-${{ matrix.type }}-x64-bin
+          name: libnode-${{ matrix.type }}-x64-bin
+
+      - name: Download PDB files (Windows)
+        if: matrix.type == 'win'
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          run_id: ${{ inputs.source_run_id }}
+          path: libnode-${{ matrix.type }}-x64-pdb
+          name: libnode-${{ matrix.type }}-x64-pdb
+
+      - name: Download SDK files
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          run_id: ${{ inputs.source_run_id }}
+          path: libnode-${{ matrix.type }}-x64-sdk
+          name: libnode-${{ matrix.type }}-x64-sdk
+
+      - name: Pack Zip Files
+        shell: bash
+        run: |
+          set -eux
+          zip -r libnode-npm.zip libnode-npm
+          zip -r libnode-${{ matrix.type }}-x64-bin.zip libnode-${{ matrix.type }}-x64-bin
+          zip -r libnode-${{ matrix.type }}-x64-sdk.zip libnode-${{ matrix.type }}-x64-sdk
+          if [ "${{ matrix.type }}" = "win" ]; then
+            zip -r libnode-${{ matrix.type }}-x64-pdb.zip libnode-${{ matrix.type }}-x64-pdb
+          fi
+
+      - name: Compute SHA256
+        id: sha256sum
+        shell: bash
+        run: |
+          FILES="libnode-${{ matrix.type }}-x64-*.zip"
+          [ "${{ matrix.type }}" = "win" ] && FILES="$FILES libnode-npm.zip"
+          sha256sum $FILES > SHA256SUMS-${{ matrix.type }}
+          echo "SHA=$(cat SHA256SUMS-${{ matrix.type }})" >> $GITHUB_OUTPUT
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.target_tag }}
+          name: Release ${{ inputs.target_tag }}
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          append_body: true
+          body: |-
+            ```
+              ${{ steps.sha256sum.outputs.SHA }}
+            ```
+
+          files: |
+            libnode-${{ matrix.type }}-x64-*.zip
+            libnode-npm.zip
+            SHA256SUMS-${{ matrix.type }}
