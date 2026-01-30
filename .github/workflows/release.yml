@@ -148,26 +148,26 @@ jobs:
       - name: Download NPM files
         uses: actions/download-artifact@v4
         with:
-          path: .
+          path: libnode-npm
           name: libnode-npm
 
       - name: Download Bin files
         uses: actions/download-artifact@v4
         with:
-          path: .
+          path: libnode-${{ matrix.type }}-x64-bin
           name: libnode-${{ matrix.type }}-x64-bin
 
       - name: Download PDB files (Windows)
         if: matrix.type == 'win'
         uses: actions/download-artifact@v4
         with:
-          path: .
+          path: libnode-${{ matrix.type }}-x64-pdb
           name: libnode-${{ matrix.type }}-x64-pdb
 
       - name: Download SDK files
         uses: actions/download-artifact@v4
         with:
-          path: .
+          path: libnode-${{ matrix.type }}-x64-sdk
           name: libnode-${{ matrix.type }}-x64-sdk
 
       - name: Pack Zip Files
