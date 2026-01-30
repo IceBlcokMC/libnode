@@ -180,11 +180,13 @@ jobs:
           fi
 
       - name: Compute SHA256
+        id: sha256sum
         shell: bash
         run: |
           FILES="libnode-${{ matrix.type }}-x64-*.zip"
           [ "${{ matrix.type }}" = "win" ] && FILES="$FILES libnode-npm.zip"
           sha256sum $FILES > SHA256SUMS-${{ matrix.type }}
+          echo "SHA=$(cat SHA256SUMS-${{ matrix.type }})" >> $GITHUB_OUTPUT
 
       - name: Upload Release
         uses: softprops/action-gh-release@v2
@@ -197,7 +199,7 @@ jobs:
           append_body: true
           body: |-
             ```
-              $(cat SHA256SUMS-${{ matrix.type }} || true)
+              ${{ steps.sha256sum.outputs.SHA }}
             ```
 
           files: |
