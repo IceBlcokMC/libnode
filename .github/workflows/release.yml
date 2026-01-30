@@ -1,7 +1,9 @@
 name: Build libnode
 
 on:
-  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
 
 env:
   LLVM_VERSION: 20
@@ -131,3 +133,73 @@ jobs:
           name: libnode-${{ matrix.type }}-x64-sdk
           path: |
             ${{ github.workspace }}/libnode-${{ matrix.type }}-x64-sdk/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        type: [win, linux]
+
+    steps:
+      - name: Download NPM files
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ github.workspace }}
+          name: libnode-npm
+
+      - name: Download Bin files
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ github.workspace }}
+          name: libnode-${{ matrix.type }}-x64-bin
+
+      - name: Download PDB files (Windows)
+        if: matrix.type == 'win'
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ github.workspace }}
+          name: libnode-${{ matrix.type }}-x64-pdb
+
+      - name: Download SDK files
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ github.workspace }}
+          name: libnode-${{ matrix.type }}-x64-sdk
+
+      - name: Pack Zip Files
+        shell: bash
+        run: |
+          set -eux
+          zip -r libnode-npm.zip libnode-npm
+          zip -r libnode-${{ matrix.type }}-x64-bin.zip libnode-${{ matrix.type }}-x64-bin
+          zip -r libnode-${{ matrix.type }}-x64-sdk.zip libnode-${{ matrix.type }}-x64-sdk
+          if [ "${{ matrix.type }}" = "win" ]; then
+            zip -r libnode-${{ matrix.type }}-x64-pdb.zip libnode-${{ matrix.type }}-x64-pdb
+          fi
+
+      - name: Compute SHA256
+        shell: bash
+        run: |
+          set -eux
+          sha256sum libnode-${{ matrix.type }}-x64-*.zip libnode-npm.zip > SHA256SUMS
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            ### Checksums
+            ```
+              $(cat SHA256SUMS)
+            ```
+
+          files: |
+            libnode-${{ matrix.type }}-x64-*.zip
+            libnode-npm.zip
+            SHA256SUMS
