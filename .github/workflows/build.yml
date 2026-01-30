@@ -17,10 +17,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - windows-2022
-          - ubuntu-24.04
-
+        include:
+          - os: windows-2022
+            type: win
+          - os: ubuntu-24.04
+            type: linux
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout libnode scripts repository
@@ -45,11 +46,11 @@ jobs:
       # Github Actions images have python 3.12.x, skip this step
 
       - name: Install NASM (Windows)
-        if: matrix.os == 'windows-2022'
+        if: matrix.type == 'win'
         run: choco install nasm
 
       - name: Update Clang Toolchain (Linux)
-        if: matrix.os == 'ubuntu-24.04'
+        if: matrix.type == 'linux'
         run: |
           sudo apt update
           sudo apt install -y wget gnupg lsb-release
@@ -64,7 +65,7 @@ jobs:
           sudo update-alternatives --install /usr/bin/ld ld /usr/bin/ld.lld-${{env.LLVM_VERSION}} 100
 
       - name: Install Ninja (Linux)
-        if: matrix.os == 'ubuntu-24.04'
+        if: matrix.type == 'linux'
         run: sudo apt install -y ninja-build
 
       - name: Export v8 platform symbols (Patch)
@@ -73,20 +74,20 @@ jobs:
           git apply ../patches/24.x/v8-export.diff
 
       - name: Reset Node.js rpath (Patch) (Linux)
-        if: matrix.os == 'ubuntu-24.04'
+        if: matrix.type == 'linux'
         working-directory: ${{ github.workspace }}/node
         run: |
           git apply ../patches/24.x/node-rpath-reset.diff
 
       - name: Build Node.js (Windows)
-        if: matrix.os == 'windows-2022'
+        if: matrix.type == 'win'
         working-directory: ${{ github.workspace }}/node
         run: |
           ./vcbuild.bat dll x64 release vs2022
         shell: pwsh
 
       - name: Configure and Build Node.js (Linux)
-        if: matrix.os == 'ubuntu-24.04'
+        if: matrix.type == 'linux'
         working-directory: ${{ github.workspace }}/node
         run: |
           export CC=clang
@@ -96,37 +97,38 @@ jobs:
           ./configure --ninja --shared
           make -j$(nproc)
 
-      - name: Packaging (Windows)
-        if: matrix.os == 'windows-2022'
+      - name: Packaging
         shell: bash
         run: |
-          sh ./scripts/packaging-win.sh
+          sh ./scripts/packaging-${{ matrix.type }}.sh
 
       # 上传编译结果
       - uses: actions/upload-artifact@v4
         with:
           include-hidden-files: true
-          name: libnode-win-x64-bin
+          name: libnode-${{ matrix.type }}-x64-bin
           path: |
-            ${{ github.workspace }}/libnode-win-x64-bin/
+            ${{ github.workspace }}/libnode-${{ matrix.type }}-x64-bin/
 
       - uses: actions/upload-artifact@v4
         with:
           include-hidden-files: true
-          name: libnode-win-x64-npm
+          name: libnode-${{ matrix.type }}-x64-npm
           path: |
-            ${{ github.workspace }}/libnode-win-x64-npm/
+            ${{ github.workspace }}/libnode-${{ matrix.type }}-x64-npm/
+
+      - name: Upload PDB files (Windows)
+        uses: actions/upload-artifact@v4
+        if: matrix.type == 'win'
+        with:
+          include-hidden-files: true
+          name: libnode-${{ matrix.type }}-x64-pdb
+          path: |
+            ${{ github.workspace }}/libnode-${{ matrix.type }}-x64-pdb/
 
       - uses: actions/upload-artifact@v4
         with:
           include-hidden-files: true
-          name: libnode-win-x64-pdb
+          name: libnode-${{ matrix.type }}-x64-sdk
           path: |
-            ${{ github.workspace }}/libnode-win-x64-pdb/
-
-      - uses: actions/upload-artifact@v4
-        with:
-          include-hidden-files: true
-          name: libnode-win-x64-sdk
-          path: |
-            ${{ github.workspace }}/libnode-win-x64-sdk/
+            ${{ github.workspace }}/libnode-${{ matrix.type }}-x64-sdk/
